@@ -62,6 +62,7 @@ if uploaded_file:
                     if (po_df['SHIP_TO_CUSTOMER'] == 'TO BE DETERMINED').any():
                         tbd_ship_to_pos.append(clean_po)
 
+            # ✅ JOIN after loop to stack vertically
             summary_data.append({
                 'Rep Name': rep,
                 'Awaiting Shipping POs': '\n'.join(awaiting_shipping_pos) if awaiting_shipping_pos else 'None',

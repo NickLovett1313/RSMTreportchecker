@@ -30,59 +30,50 @@ if uploaded_file:
 
     # --- Checkboxes ---
     selected_reps = st.multiselect(
-        "✅ Select reps to check:",
+        "Select reps to check:",
         options=unique_reps,
         default=default_selected
     )
 
-    # --- Analyze button BELOW checkboxes ---
+    # --- Analyze button ---
     if st.button("🔍 Analyze"):
-        with st.spinner("Analyzing file... please wait ⏳"):
-            summary_data = []
+        summary_data = []
 
-            for rep in selected_reps:
-                rep_df = df[df['CONTACT_NM'] == rep]
-                unique_pos = rep_df['PO'].dropna().unique().tolist()
+        for rep in selected_reps:
+            rep_df = df[df['CONTACT_NM'] == rep]
+            unique_pos = rep_df['PO'].dropna().unique().tolist()
 
-                awaiting_shipping_pos = []
-                tbd_ship_to_pos = []
+            awaiting_shipping_pos = []
+            tbd_ship_to_pos = []
 
-                for po in unique_pos:
-                    po_df = rep_df[rep_df['PO'] == po]
+            for po in unique_pos:
+                po_df = rep_df[rep_df['PO'] == po]
 
-                    # Check if any line has 'AWAITING_SHIPPING'
-                    if (po_df['LINE_STATUS'] == 'AWAITING_SHIPPING').any():
-                        # Clean up PO number (remove .0 if numeric)
-                        try:
-                            clean_po = str(int(float(po)))
-                        except:
-                            clean_po = str(po)
-                        awaiting_shipping_pos.append(clean_po)
+                # Check if any line has 'AWAITING_SHIPPING'
+                if (po_df['LINE_STATUS'] == 'AWAITING_SHIPPING').any():
+                    awaiting_shipping_pos.append(str(po))
 
-                        # If so, check if any line has 'TO BE DETERMINED' in SHIP_TO_CUSTOMER
-                        if (po_df['SHIP_TO_CUSTOMER'] == 'TO BE DETERMINED').any():
-                            tbd_ship_to_pos.append(clean_po)
+                    # If so, check if any line has 'TO BE DETERMINED' in SHIP_TO_CUSTOMER
+                    if (po_df['SHIP_TO_CUSTOMER'] == 'TO BE DETERMINED').any():
+                        tbd_ship_to_pos.append(str(po))
 
-                # ✅ JOIN after loop to stack vertically with one PO per line
-                summary_data.append({
-                    'Rep Name': rep,
-                    'Awaiting Shipping POs': '\n'.join(awaiting_shipping_pos) if awaiting_shipping_pos else 'None',
-                    'TBD Ship To POs': '\n'.join(tbd_ship_to_pos) if tbd_ship_to_pos else 'None'
-                })
+            summary_data.append({
+                'Rep Name': rep,
+                'Awaiting Shipping POs': '\n'.join(awaiting_shipping_pos) if awaiting_shipping_pos else 'None',
+                'TBD Ship To POs': '\n'.join(tbd_ship_to_pos) if tbd_ship_to_pos else 'None'
+            })
 
-            st.subheader("📊 Summary Table")
-            summary_df = pd.DataFrame(summary_data)
+        st.subheader("📊 Summary Table")
+        summary_df = pd.DataFrame(summary_data)
+        st.table(summary_df)  # st.table for better cell wrapping
 
-            # ✅ Force text wrap for line breaks
-            st.table(summary_df)
-
-            # --- Download button ---
-            csv = summary_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="⬇️ Download CSV",
-                data=csv,
-                file_name='awaiting_shipping_summary.csv',
-                mime='text/csv'
-            )
+        # --- Download button ---
+        csv = summary_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="⬇️ Download CSV",
+            data=csv,
+            file_name='awaiting_shipping_summary.csv',
+            mime='text/csv'
+        )
 else:
     st.info("👆 Upload an Excel file to get started.")

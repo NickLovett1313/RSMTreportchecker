@@ -2,17 +2,53 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+# --- Page title ---
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
 
+# --- File upload ---
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
-# Format today's date nicely
+# --- Format date suffix for email ---
 def format_date_suffix(date_obj):
     day = int(date_obj.strftime("%d"))
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date_obj.strftime(f"%B {day}{suffix}, %Y")
 
+# --- Generate a clean, copyable text-based table ---
+def generate_outlook_table_text(df: pd.DataFrame) -> str:
+    col_widths = {
+        "Rep Name": max(len("Rep Name"), max(df["Rep Name"].apply(len))),
+        "Awaiting Shipping POs": max(len("Awaiting Shipping POs"), max(df["Awaiting Shipping POs"].apply(len))),
+        "TBD Ship To POs": max(len("TBD Ship To POs"), max(df["TBD Ship To POs"].apply(len)))
+    }
+
+    def row_line():
+        return "+" + "+".join(["-" * (col_widths[col] + 2) for col in col_widths]) + "+"
+
+    def format_row(row):
+        return "| " + " | ".join([
+            row["Rep Name"].ljust(col_widths["Rep Name"]),
+            row["Awaiting Shipping POs"].ljust(col_widths["Awaiting Shipping POs"]),
+            row["TBD Ship To POs"].ljust(col_widths["TBD Ship To POs"])
+        ]) + " |"
+
+    lines = [row_line()]
+    headers = "| " + " | ".join([
+        "Rep Name".ljust(col_widths["Rep Name"]),
+        "Awaiting Shipping POs".ljust(col_widths["Awaiting Shipping POs"]),
+        "TBD Ship To POs".ljust(col_widths["TBD Ship To POs"])
+    ]) + " |"
+    lines.append(headers)
+    lines.append(row_line())
+
+    for _, row in df.iterrows():
+        lines.append(format_row(row))
+    lines.append(row_line())
+
+    return "\n".join(lines)
+
+# --- Main logic ---
 if uploaded_file:
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     unique_reps = df['CONTACT_NM'].dropna().unique().tolist()
@@ -47,37 +83,31 @@ if uploaded_file:
 
             summary_data.append({
                 'Rep Name': rep,
-                'Awaiting Shipping POs': '\n'.join(awaiting_shipping_pos) if awaiting_shipping_pos else 'None',
-                'TBD Ship To POs': '\n'.join(tbd_ship_to_pos) if tbd_ship_to_pos else 'None'
+                'Awaiting Shipping POs': ', '.join(awaiting_shipping_pos) if awaiting_shipping_pos else 'None',
+                'TBD Ship To POs': ', '.join(tbd_ship_to_pos) if tbd_ship_to_pos else 'None'
             })
 
         st.subheader("📊 Summary Table")
         summary_df = pd.DataFrame(summary_data)
         st.dataframe(summary_df, use_container_width=True)
 
-        # --- Generate email view ---
         if st.button("📋 Ready to send to team?"):
             formatted_date = format_date_suffix(datetime.today())
 
             subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
-            body = """
-Hi Team,
-
-The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.
-See the table below and find your name for information on your orders.
-
-Thanks!
-"""
+            body = (
+                "Hi Team,\n\n"
+                "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
+                "See the table below and find your name for information on your orders.\n\n"
+                "Thanks!"
+            )
 
             st.markdown(f"**✉️ Email Subject:** `{subject}`")
             st.markdown("**📩 Email Body:**")
-            st.code(body.strip())
+            st.code(body)
 
-            # Convert DataFrame to HTML table
-            html_table = summary_df.to_html(index=False, escape=False).replace('\n', '<br>')
-
-            st.markdown("**📎 Copyable Table for Outlook/Gmail:**", unsafe_allow_html=True)
-            st.markdown(html_table, unsafe_allow_html=True)
-
+            st.markdown("**📎 Copyable Table for Email:**")
+            table_text = generate_outlook_table_text(summary_df)
+            st.code(table_text)
 else:
     st.info("👆 Upload an Excel file to get started.")

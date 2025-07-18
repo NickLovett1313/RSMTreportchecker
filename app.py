@@ -4,29 +4,25 @@ import pandas as pd
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
 
-# --- File upload ---
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
-# Initialize session state flag
-if 'run_analysis' not in st.session_state:
+# Init session flag
+if "run_analysis" not in st.session_state:
     st.session_state.run_analysis = False
-
-def trigger_analysis():
-    st.session_state.run_analysis = True
 
 if uploaded_file:
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     unique_reps = df['CONTACT_NM'].dropna().unique().tolist()
     unique_reps.sort()
 
-    selected_reps = st.multiselect(
-        "Select reps to check:",
-        options=unique_reps
-    )
+    selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
 
-    st.button("🚀 Run Analysis", on_click=trigger_analysis)
+    # Press to run
+    if st.button("🚀 Run Analysis"):
+        st.session_state.run_analysis = True
 
-    if st.session_state.run_analysis:
+    # Only run after button is clicked
+    if st.session_state.run_analysis and selected_reps:
         summary_data = []
 
         for rep in selected_reps:

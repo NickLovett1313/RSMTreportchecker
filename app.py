@@ -92,22 +92,30 @@ if uploaded_file:
         st.dataframe(summary_df, use_container_width=True)
 
         if st.button("📋 Ready to send to team?"):
-            formatted_date = format_date_suffix(datetime.today())
+            try:
+                formatted_date = format_date_suffix(datetime.today())
 
-            subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
-            body = (
-                "Hi Team,\n\n"
-                "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
-                "See the table below and find your name for information on your orders.\n\n"
-                "Thanks!"
-            )
+                subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
+                body = (
+                    "Hi Team,\n\n"
+                    "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
+                    "See the table below and find your name for information on your orders.\n\n"
+                    "Thanks!"
+                )
 
-            st.markdown(f"**✉️ Email Subject:** `{subject}`")
-            st.markdown("**📩 Email Body:**")
-            st.code(body)
+                st.markdown("### ✉️ Email Subject")
+                st.code(subject, language="")
 
-            st.markdown("**📎 Copyable Table for Email:**")
-            table_text = generate_outlook_table_text(summary_df)
-            st.code(table_text)
+                st.markdown("### 📩 Email Body")
+                st.code(body, language="")
+
+                st.markdown("### 📎 Copyable Outlook-Style Table")
+                table_text = generate_outlook_table_text(summary_df)
+                st.code(table_text, language="")
+
+            except Exception as e:
+                st.error("Something went wrong generating the email content.")
+                st.exception(e)
+
 else:
     st.info("👆 Upload an Excel file to get started.")

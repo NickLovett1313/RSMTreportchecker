@@ -6,16 +6,13 @@ from datetime import datetime
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
 
-# --- File upload ---
-uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
-
-# --- Format date suffix for email ---
+# --- Format date for subject ---
 def format_date_suffix(date_obj):
     day = int(date_obj.strftime("%d"))
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date_obj.strftime(f"%B {day}{suffix}, %Y")
 
-# --- Generate a clean, copyable text-based table ---
+# --- Generate copyable Outlook table ---
 def generate_outlook_table_text(df: pd.DataFrame) -> str:
     col_widths = {
         "Rep Name": max(len("Rep Name"), max(df["Rep Name"].apply(len))),
@@ -48,17 +45,18 @@ def generate_outlook_table_text(df: pd.DataFrame) -> str:
 
     return "\n".join(lines)
 
-# --- Main logic ---
+# --- Upload ---
+uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
+
 if uploaded_file:
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     unique_reps = df['CONTACT_NM'].dropna().unique().tolist()
     unique_reps.sort()
 
-    with st.form("rep_form"):
-        selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
-        submitted = st.form_submit_button("🚀 Run Analysis")
+    st.markdown("### ✅ Step 1: Choose reps")
+    selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
 
-    if submitted and selected_reps:
+    if st.button("🚀 Run Analysis"):
         summary_data = []
 
         for rep in selected_reps:
@@ -87,35 +85,39 @@ if uploaded_file:
                 'TBD Ship To POs': ', '.join(tbd_ship_to_pos) if tbd_ship_to_pos else 'None'
             })
 
-        st.subheader("📊 Summary Table")
         summary_df = pd.DataFrame(summary_data)
+
+        st.subheader("📊 Summary Table")
         st.dataframe(summary_df, use_container_width=True)
 
-        if st.button("📋 Ready to send to team?"):
-            try:
-                formatted_date = format_date_suffix(datetime.today())
+        # Save to session for reuse
+        st.session_state['summary_df'] = summary_df
 
-                subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
-                body = (
-                    "Hi Team,\n\n"
-                    "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
-                    "See the table below and find your name for information on your orders.\n\n"
-                    "Thanks!"
-                )
+        csv = summary_df.to_csv(index=False).encode('utf-8')
+        st.download_button("⬇️ Download CSV", data=csv, file_name='awaiting_shipping_summary.csv', mime='text/csv')
 
-                st.markdown("### ✉️ Email Subject")
-                st.code(subject, language="")
+    # --- Generate Email ---
+    if 'summary_df' in st.session_state and st.button("📋 Ready to send to team?"):
+        summary_df = st.session_state['summary_df']
+        formatted_date = format_date_suffix(datetime.today())
 
-                st.markdown("### 📩 Email Body")
-                st.code(body, language="")
+        subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
+        body = (
+            "Hi Team,\n\n"
+            "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
+            "See the table below and find your name for information on your orders.\n\n"
+            "Thanks!"
+        )
+        table_text = generate_outlook_table_text(summary_df)
 
-                st.markdown("### 📎 Copyable Outlook-Style Table")
-                table_text = generate_outlook_table_text(summary_df)
-                st.code(table_text, language="")
+        st.markdown("### ✉️ Email Subject")
+        st.code(subject, language='')
 
-            except Exception as e:
-                st.error("Something went wrong generating the email content.")
-                st.exception(e)
+        st.markdown("### 📩 Email Body")
+        st.code(body, language='')
+
+        st.markdown("### 📎 Copyable Table for Email")
+        st.code(table_text, language='')
 
 else:
     st.info("👆 Upload an Excel file to get started.")

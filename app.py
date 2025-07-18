@@ -6,23 +6,17 @@ st.title("📦 Awaiting Shipping Checker")
 
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
-# Init session flag
-if "run_analysis" not in st.session_state:
-    st.session_state.run_analysis = False
-
 if uploaded_file:
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     unique_reps = df['CONTACT_NM'].dropna().unique().tolist()
     unique_reps.sort()
 
-    selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
+    # --- Form to select reps and run analysis ---
+    with st.form("rep_form"):
+        selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
+        submitted = st.form_submit_button("🚀 Run Analysis")
 
-    # Press to run
-    if st.button("🚀 Run Analysis"):
-        st.session_state.run_analysis = True
-
-    # Only run after button is clicked
-    if st.session_state.run_analysis and selected_reps:
+    if submitted and selected_reps:
         summary_data = []
 
         for rep in selected_reps:

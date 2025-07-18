@@ -1,17 +1,23 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
 
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
+# Format today's date nicely
+def format_date_suffix(date_obj):
+    day = int(date_obj.strftime("%d"))
+    suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+    return date_obj.strftime(f"%B {day}{suffix}, %Y")
+
 if uploaded_file:
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     unique_reps = df['CONTACT_NM'].dropna().unique().tolist()
     unique_reps.sort()
 
-    # --- Form to select reps and run analysis ---
     with st.form("rep_form"):
         selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
         submitted = st.form_submit_button("🚀 Run Analysis")
@@ -49,12 +55,29 @@ if uploaded_file:
         summary_df = pd.DataFrame(summary_data)
         st.dataframe(summary_df, use_container_width=True)
 
-        csv = summary_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="⬇️ Download CSV",
-            data=csv,
-            file_name='awaiting_shipping_summary.csv',
-            mime='text/csv'
-        )
+        # --- Generate email view ---
+        if st.button("📋 Ready to send to team?"):
+            formatted_date = format_date_suffix(datetime.today())
+
+            subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
+            body = """
+Hi Team,
+
+The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.
+See the table below and find your name for information on your orders.
+
+Thanks!
+"""
+
+            st.markdown(f"**✉️ Email Subject:** `{subject}`")
+            st.markdown("**📩 Email Body:**")
+            st.code(body.strip())
+
+            # Convert DataFrame to HTML table
+            html_table = summary_df.to_html(index=False, escape=False).replace('\n', '<br>')
+
+            st.markdown("**📎 Copyable Table for Outlook/Gmail:**", unsafe_allow_html=True)
+            st.markdown(html_table, unsafe_allow_html=True)
+
 else:
     st.info("👆 Upload an Excel file to get started.")

@@ -2,17 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# --- Page title ---
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
 
-# --- Format date for subject ---
 def format_date_suffix(date_obj):
     day = int(date_obj.strftime("%d"))
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date_obj.strftime(f"%B {day}{suffix}, %Y")
 
-# --- Upload ---
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
 if uploaded_file:
@@ -52,57 +49,48 @@ if uploaded_file:
         summary_df = st.session_state["summary_df"]
         date_str = format_date_suffix(datetime.today())
 
-        # Build plain-text lines
-        lines = [
-            "Hi Team,",
-            "",
-            "The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for",
-            "those CC’d.",
-            "",
-            "Note: for those PO#s with items awaiting shipment: If you haven’t yet received a packing",
-            "slip for release, I recommend reaching out to your factory contact.",
-            "",
-            "Note: for those PO#s with a TBD ship-to address: This information must be provided to",
-            "the factory before they can issue a packing slip.",
-            "",
-            "See information below:",
-            "",
-            "----------------------------",
-            ""
-        ]
-        for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
-            s, a, tbd = row
-            lines += [
-                f"{idx}. {s}",
-                f"o PO#s Awaiting Shipping: {a}",
-                f"o PO#s with TBD Ship-To Address: {tbd}",
-                ""
-            ]
-        lines += ["----------------------------", "", "Thanks!"]
-
-        # Subject (rendered normally)
+        # Subject
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
         st.markdown("### ✉️ Email Subject")
-        st.markdown(f"<div style='font-family:Arial, sans-serif; color:#333; font-size:14px;'>{subject}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-family:Arial; font-size:14px; color:#333'>{subject}</div>", unsafe_allow_html=True)
 
-        # Body in a styled container
-        body_text = "\n".join(lines)
-        html = f"""
-<div style="
-    font-family: Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-    color: #333;
-    background-color: #F5F5F5;
-    padding: 16px;
-    border-radius: 6px;
-    white-space: pre-wrap;
-">
-{body_text}
+        # Styled HTML Email Body
+        email_body = f"""
+<div style="font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#000; background:#f9f9f9; padding:16px; border-radius:8px;">
+<p>Hi Team,</p>
+
+<p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
+
+<p style="margin-left:1.5em;">
+  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with items awaiting shipment</span><span style="color:#ED7D31">: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</span></i>
+</p>
+
+<p style="margin-left:1.5em;">
+  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with a TBD ship-to address: </span><span style="color:#0070C0">This information must be provided to the factory before they can issue a packing slip.</span></i>
+</p>
+
+<p><b>See information below:</b></p>
+
+<p>----------------------------</p>
+"""
+
+        for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
+            name, aw, tbd = row
+            email_body += f"""
+<p style="margin-left:0.25in;"><b>{idx}. {name}</b></p>
+<ul style="list-style-type:none; margin-top:0; margin-bottom:1em; margin-left:1.5in; padding-left:0;">
+  <li><span style="font-family:'Courier New'; color:#ED7D31;">o</span> <span style="color:#ED7D31;">PO#s Awaiting Shipping: {aw}</span></li>
+  <li><span style="font-family:'Courier New'; color:#0070C0;">o</span> <span style="color:#0070C0;">PO#s with TBD Ship-To Address: {tbd}</span></li>
+</ul>
+"""
+
+        email_body += """
+<p>----------------------------</p>
+<p>Thanks!</p>
 </div>
 """
         st.markdown("### 📩 Email Body")
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(email_body, unsafe_allow_html=True)
 
 else:
     st.info("👆 Upload an Excel file to get started.")

@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
@@ -53,7 +54,7 @@ if uploaded_file:
         st.markdown("### ✉️ Email Subject")
         st.markdown(f"<div style='font-family:Arial; font-size:14px; color:#333'>{subject}</div>", unsafe_allow_html=True)
 
-        # Build formatted HTML email body
+        # Build styled HTML email body
         email_body = f"""
 <div style="font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#000; background:#f9f9f9; padding:16px; border-radius:8px;">
 <p>Hi Team,</p>
@@ -72,7 +73,7 @@ if uploaded_file:
 <p style="margin-bottom:6px;">----------------------------</p>
 """
 
-        # Add each Spartan
+        # Add each Spartan’s section
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
             name, aw, tbd = row
             email_body += f"""
@@ -89,29 +90,31 @@ if uploaded_file:
 </div>
 """
 
-        # Render styled panel
+        # Display formatted email preview
         st.markdown("### 📩 Email Body")
         st.markdown(email_body, unsafe_allow_html=True)
 
-        # Copy-to-clipboard button
-        st.markdown("""
-            <button id="copyBtn" style="margin-top:10px; padding:8px 16px; font-family:Arial; font-size:13px; background:#0070C0; color:white; border:none; border-radius:4px; cursor:pointer;">
-                📋 Copy Email to Clipboard
-            </button>
-            <script>
-            const copyBtn = document.getElementById('copyBtn');
-            copyBtn.onclick = () => {{
-                const el = document.createElement('textarea');
-                el.value = `{email_body.replace('`', '\\`').replace('</p>', '\\n').replace('<br>', '\\n')}`;
-                document.body.appendChild(el);
+        # Copy-to-Clipboard Button
+        st.markdown("### 📎 Copy HTML to Clipboard")
+        components.html(f"""
+            <textarea id="emailContent" style="position: absolute; left: -9999px;">{email_body}</textarea>
+            <button onclick="
+                const el = document.getElementById('emailContent');
                 el.select();
                 document.execCommand('copy');
-                document.body.removeChild(el);
-                copyBtn.innerText = '✅ Copied!';
-                setTimeout(() => copyBtn.innerText = '📋 Copy Email to Clipboard', 3000);
-            }};
-            </script>
-        """, unsafe_allow_html=True)
+                this.innerText = '✅ Copied!';
+                setTimeout(() => this.innerText = '📋 Copy HTML to Clipboard', 2000);
+            " style="
+                margin-top:10px;
+                padding:10px 16px;
+                font-size:14px;
+                background:#0070C0;
+                color:white;
+                border:none;
+                border-radius:4px;
+                cursor:pointer;
+            ">📋 Copy HTML to Clipboard</button>
+        """, height=100)
 
 else:
     st.info("👆 Upload an Excel file to get started.")

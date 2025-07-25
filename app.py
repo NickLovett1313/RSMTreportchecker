@@ -16,7 +16,7 @@ def format_date_suffix(date_obj):
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
 if uploaded_file:
-    df = pd.read_excel(uploaded_file, engine='openpyxl')
+    df = pd.read_excel(uploaded_file, engine="openpyxl")
     unique_spartans = sorted(df['CONTACT_NM'].dropna().unique().tolist())
 
     st.markdown("### ✅ Step 1: Choose Spartans")
@@ -41,8 +41,8 @@ if uploaded_file:
 
             summary_data.append({
                 'Spartan': spartan,
-                'Awaiting Shipping POs': ", ".join(awaiting) or "None",
-                'TBD Ship To POs': ", ".join(tbd) or "None"
+                'Awaiting Shipping POs': ', '.join(awaiting) or 'None',
+                'TBD Ship To POs': ', '.join(tbd) or 'None'
             })
 
         summary_df = pd.DataFrame(summary_data)
@@ -54,42 +54,40 @@ if uploaded_file:
         summary_df = st.session_state['summary_df']
         formatted_date = format_date_suffix(datetime.today())
 
-        # Build a single HTML block for subject + body
-        html = f"""
+        # Build the full email as one HTML block
+        email_html = f"""
 <div style="font-family:Arial; color:#333; line-height:1.4;">
-  <h3 style="margin-bottom:0.2em;">✉️ Email Subject</h3>
-  <p style="margin-top:0;">Rosemount Orders – Daily Open Orders Report Review: <strong>{formatted_date}</strong></p>
+  <div style="font-size:1.2em; font-weight:bold;">✉️ Email Subject</div>
+  <div style="margin-bottom:1em;">Rosemount Orders – Daily Open Orders Report Review: {formatted_date}</div>
 
-  <h3 style="margin-top:1.5em; margin-bottom:0.2em;">📩 Email Body</h3>
-  <p style="margin-top:0;">Hi Team,</p>
+  <div style="font-size:1.2em; font-weight:bold; margin-top:1em;">📩 Email Body</div>
+  <p>Hi Team,</p>
   <p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
   <p><strong>Note:</strong> for those PO#s with items awaiting shipment: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</p>
   <p><strong>Note:</strong> for those PO#s with a TBD ship-to address: This information must be provided to the factory before they can issue a packing slip.</p>
   <p>See information below:</p>
+
   <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
 
-  <ol style="padding-left:1em; margin:0;">
+  <ul style="padding-left:0; list-style-type:none; margin:0;">
 """
         for row in summary_df.itertuples(index=False):
             sp, aw, td = row
-            html += f"""
+            email_html += f"""
     <li style="margin-bottom:0.5em;">
-      <strong>{sp}</strong>
-      <ul style="list-style-type:circle; margin:0.3em 0 0.3em 1em; padding:0;">
+      <div style="font-weight:bold;">{sp}</div>
+      <ul style="list-style-type:circle; padding-left:1em; margin:0.2em 0;">
         <li>PO#s Awaiting Shipping: {aw}</li>
         <li>PO#s with TBD Ship-To Address: {td}</li>
       </ul>
     </li>
 """
-        html += """
-  </ol>
+        email_html += """
+  </ul>
   <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
   <p>Thanks!</p>
 </div>
 """
-
-        # Render it as HTML—select it all and paste into Outlook
-        st.markdown(html, unsafe_allow_html=True)
-
+        st.markdown(email_html, unsafe_allow_html=True)
 else:
     st.info("👆 Upload an Excel file to get started.")

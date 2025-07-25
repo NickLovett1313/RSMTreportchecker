@@ -51,29 +51,67 @@ if uploaded_file:
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
 
         st.markdown("### ✉️ Email Subject")
-        st.code(subject)
+        st.markdown(f"<div style='font-family:Arial; font-size:14px; color:#333'>{subject}</div>", unsafe_allow_html=True)
 
-        # Build rich text email output
-        lines = []
-        lines.append("Hi Team,\n")
-        lines.append("The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.\n")
-        lines.append("*_Note: for those PO#s with items awaiting shipment_* — _If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact._\n")
-        lines.append("*_Note: for those PO#s with a TBD ship-to address_* — _This information must be provided to the factory before they can issue a packing slip._\n")
-        lines.append("See information below:\n")
-        lines.append("----------------------------\n")
+        # Build formatted HTML email body
+        email_body = f"""
+<div style="font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#000; background:#f9f9f9; padding:16px; border-radius:8px;">
+<p>Hi Team,</p>
 
+<p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
+
+<p style="margin-left:1.5em;">
+  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with items awaiting shipment</span><span style="color:#ED7D31">: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</span></i>
+</p>
+
+<p style="margin-left:1.5em;">
+  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with a TBD ship-to address: </span><span style="color:#0070C0">This information must be provided to the factory before they can issue a packing slip.</span></i>
+</p>
+
+<p><b>See information below:</b></p>
+<p style="margin-bottom:6px;">----------------------------</p>
+"""
+
+        # Add each Spartan
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
-            spartan, awaiting, tbd = row
-            lines.append(f"{idx}. {spartan}")
-            lines.append(f"- PO#s Awaiting Shipping: {awaiting}")
-            lines.append(f"- PO#s with TBD Ship-To Address: {tbd}")
-            lines.append("")
+            name, aw, tbd = row
+            email_body += f"""
+<p style="margin-bottom:0;"><b>{idx}. {name}</b></p>
+<ul style="list-style:none; margin-top:0; margin-left:1.5em; padding-left:0;">
+  <li><span style='color:#0070C0'>-</span> <span style='color:#ED7D31'>PO#s Awaiting Shipping: {aw}</span></li>
+  <li><span style='color:#0070C0'>-</span> <span style='color:#0070C0'>PO#s with TBD Ship-To Address: {tbd}</span></li>
+</ul>
+"""
 
-        lines.append("----------------------------")
-        lines.append("Thanks!")
+        email_body += """
+<p style="margin-top:0;">----------------------------</p>
+<p>Thanks!</p>
+</div>
+"""
 
-        # Join into one copyable string
-        final_message = "\n".join(lines)
-
+        # Render styled panel
         st.markdown("### 📩 Email Body")
-        st.text_area("Copy this text below ⬇️ and paste into Outlook", value=final_message, height=400)
+        st.markdown(email_body, unsafe_allow_html=True)
+
+        # Copy-to-clipboard button
+        st.markdown("""
+            <button id="copyBtn" style="margin-top:10px; padding:8px 16px; font-family:Arial; font-size:13px; background:#0070C0; color:white; border:none; border-radius:4px; cursor:pointer;">
+                📋 Copy Email to Clipboard
+            </button>
+            <script>
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.onclick = () => {{
+                const el = document.createElement('textarea');
+                el.value = `{email_body.replace('`', '\\`').replace('</p>', '\\n').replace('<br>', '\\n')}`;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                copyBtn.innerText = '✅ Copied!';
+                setTimeout(() => copyBtn.innerText = '📋 Copy Email to Clipboard', 3000);
+            }};
+            </script>
+        """, unsafe_allow_html=True)
+
+else:
+    st.info("👆 Upload an Excel file to get started.")

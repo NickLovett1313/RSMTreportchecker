@@ -12,39 +12,6 @@ def format_date_suffix(date_obj):
     suffix = "th" if 11 <= day <= 13 else {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
     return date_obj.strftime(f"%B {day}{suffix}, %Y")
 
-# --- Generate copyable Outlook table ---
-def generate_outlook_table_text(df: pd.DataFrame) -> str:
-    col_widths = {
-        "Rep Name": max(len("Rep Name"), max(df["Rep Name"].apply(len))),
-        "Awaiting Shipping POs": max(len("Awaiting Shipping POs"), max(df["Awaiting Shipping POs"].apply(len))),
-        "TBD Ship To POs": max(len("TBD Ship To POs"), max(df["TBD Ship To POs"].apply(len)))
-    }
-
-    def row_line():
-        return "+" + "+".join(["-" * (col_widths[col] + 2) for col in col_widths]) + "+"
-
-    def format_row(row):
-        return "| " + " | ".join([
-            row["Rep Name"].ljust(col_widths["Rep Name"]),
-            row["Awaiting Shipping POs"].ljust(col_widths["Awaiting Shipping POs"]),
-            row["TBD Ship To POs"].ljust(col_widths["TBD Ship To POs"])
-        ]) + " |"
-
-    lines = [row_line()]
-    headers = "| " + " | ".join([
-        "Rep Name".ljust(col_widths["Rep Name"]),
-        "Awaiting Shipping POs".ljust(col_widths["Awaiting Shipping POs"]),
-        "TBD Ship To POs".ljust(col_widths["TBD Ship To POs"])
-    ]) + " |"
-    lines.append(headers)
-    lines.append(row_line())
-
-    for _, row in df.iterrows():
-        lines.append(format_row(row))
-    lines.append(row_line())
-
-    return "\n".join(lines)
-
 # --- Upload ---
 uploaded_file = st.file_uploader("Upload the latest Excel sheet", type=["xlsx"])
 
@@ -58,7 +25,6 @@ if uploaded_file:
 
     if st.button("🚀 Run Analysis"):
         summary_data = []
-
         for rep in selected_reps:
             rep_df = df[df['CONTACT_NM'] == rep]
             unique_pos = rep_df['PO'].dropna().unique().tolist()
@@ -68,8 +34,8 @@ if uploaded_file:
 
             for po in unique_pos:
                 po_df = rep_df[rep_df['PO'] == po]
-
                 if (po_df['LINE_STATUS'] == 'AWAITING_SHIPPING').any():
+                    # clean up PO number formatting
                     try:
                         clean_po = str(int(float(po)))
                     except:
@@ -86,11 +52,8 @@ if uploaded_file:
             })
 
         summary_df = pd.DataFrame(summary_data)
-
         st.subheader("📊 Summary Table")
         st.dataframe(summary_df, use_container_width=True)
-
-        # Save to session for reuse
         st.session_state['summary_df'] = summary_df
 
         csv = summary_df.to_csv(index=False).encode('utf-8')
@@ -105,10 +68,18 @@ if uploaded_file:
         body = (
             "Hi Team,\n\n"
             "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
-            "See the table below and find your name for information on your orders.\n\n"
+            "See your section below for details on your orders.\n\n"
             "Thanks!"
         )
-        table_text = generate_outlook_table_text(summary_df)
+
+        # Build a Markdown bullet list per rep
+        lines = []
+        for row in summary_df.itertuples(index=False):
+            rep, awaiting, tbd = row
+            lines.append(f"- **{rep}**")
+            lines.append(f"    - Awaiting Shipping POs: {awaiting}")
+            lines.append(f"    - TBD Ship To POs: {tbd}")
+        list_md = "\n".join(lines)
 
         st.markdown("### ✉️ Email Subject")
         st.code(subject, language='')
@@ -116,8 +87,8 @@ if uploaded_file:
         st.markdown("### 📩 Email Body")
         st.code(body, language='')
 
-        st.markdown("### 📎 Copyable Table for Email")
-        st.code(table_text, language='')
+        st.markdown("### 📋 Orders by Rep")
+        st.markdown(list_md)
 
 else:
     st.info("👆 Upload an Excel file to get started.")

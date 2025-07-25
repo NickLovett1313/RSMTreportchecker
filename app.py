@@ -2,15 +2,20 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from PIL import Image
+import os
 
 # Page config
 st.set_page_config(page_title="RSMT – Daily Open Orders Report Checker")
 
-# Display Spartan logo + title side-by-side
-logo = Image.open("spartan logo.jpg")
+# Try to display Spartan logo + title side-by-side
+logo_path = "/mnt/data/spartan logo.jpg"
 col1, col2 = st.columns([1, 6])
 with col1:
-    st.image(logo, width=100)
+    if os.path.exists(logo_path):
+        logo = Image.open(logo_path)
+        st.image(logo, width=100)
+    else:
+        st.warning("⚠️ Spartan logo not found.")
 with col2:
     st.title("📦 RSMT – Daily Open Orders Report Checker")
 

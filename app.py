@@ -21,9 +21,12 @@ if uploaded_file:
     unique_reps.sort()
 
     st.markdown("### ✅ Step 1: Choose reps")
-    selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
+    # Use a form so nothing runs until you click "Run Analysis"
+    with st.form("rep_form"):
+        selected_reps = st.multiselect("Select reps to check:", options=unique_reps)
+        run = st.form_submit_button("🚀 Run Analysis")
 
-    if st.button("🚀 Run Analysis"):
+    if run:
         summary_data = []
         for rep in selected_reps:
             rep_df = df[df['CONTACT_NM'] == rep]
@@ -35,7 +38,6 @@ if uploaded_file:
             for po in unique_pos:
                 po_df = rep_df[rep_df['PO'] == po]
                 if (po_df['LINE_STATUS'] == 'AWAITING_SHIPPING').any():
-                    # clean up PO number formatting
                     try:
                         clean_po = str(int(float(po)))
                     except:
@@ -65,30 +67,27 @@ if uploaded_file:
         formatted_date = format_date_suffix(datetime.today())
 
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
-        body = (
+        body_intro = (
             "Hi Team,\n\n"
             "The Rosemount Daily Open Orders Report has been reviewed for all of you CC'd on this email.\n"
             "See your section below for details on your orders.\n\n"
-            "Thanks!"
+            "Thanks!\n"
         )
 
-        # Build a Markdown bullet list per rep
-        lines = []
+        # Build the bullet list into the body
+        lines = [body_intro]
         for row in summary_df.itertuples(index=False):
             rep, awaiting, tbd = row
             lines.append(f"- **{rep}**")
             lines.append(f"    - Awaiting Shipping POs: {awaiting}")
             lines.append(f"    - TBD Ship To POs: {tbd}")
-        list_md = "\n".join(lines)
+        body_full = "\n".join(lines)
 
         st.markdown("### ✉️ Email Subject")
         st.code(subject, language='')
 
         st.markdown("### 📩 Email Body")
-        st.code(body, language='')
-
-        st.markdown("### 📋 Orders by Rep")
-        st.markdown(list_md)
+        st.code(body_full, language='')
 
 else:
     st.info("👆 Upload an Excel file to get started.")

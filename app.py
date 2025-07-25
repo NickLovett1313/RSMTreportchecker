@@ -1,25 +1,11 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from PIL import Image
-import os
 
-# Page config
 st.set_page_config(page_title="RSMT – Daily Open Orders Report Checker")
+st.title("📦 RSMT – Daily Open Orders Report Checker")
 
-# Try to display Spartan logo + title side-by-side
-logo_path = "/mnt/data/spartan logo.jpg"
-col1, col2 = st.columns([1, 6])
-with col1:
-    if os.path.exists(logo_path):
-        logo = Image.open(logo_path)
-        st.image(logo, width=100)
-    else:
-        st.warning("⚠️ Spartan logo not found.")
-with col2:
-    st.title("📦 RSMT – Daily Open Orders Report Checker")
-
-# App description and steps
+# Description + Instructions
 st.markdown("""
 This app checks the latest RSMT Open Orders report for selected Spartans and returns whether any of their assigned PO#s:
 - Have items **awaiting shipment**, or

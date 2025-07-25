@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import pyperclip  # Only used for local dev — not supported in deployed Streamlit
 
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
@@ -30,7 +31,7 @@ if uploaded_file:
             for po in pos:
                 block = sub[sub["PO"] == po]
                 if (block["LINE_STATUS"] == "AWAITING_SHIPPING").any():
-                    clean = str(int(float(po))) if str(po).replace(".0","").isdigit() else str(po)
+                    clean = str(int(float(po))) if str(po).replace(".0", "").isdigit() else str(po)
                     a.append(clean)
                     if (block["SHIP_TO_CUSTOMER"] == "TO BE DETERMINED").any():
                         t.append(clean)
@@ -48,13 +49,12 @@ if uploaded_file:
     if "summary_df" in st.session_state and st.button("📋 Ready to send to team?"):
         summary_df = st.session_state["summary_df"]
         date_str = format_date_suffix(datetime.today())
-
-        # Subject
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
+
         st.markdown("### ✉️ Email Subject")
         st.markdown(f"<div style='font-family:Arial; font-size:14px; color:#333'>{subject}</div>", unsafe_allow_html=True)
 
-        # Styled HTML Email Body
+        # Build formatted HTML email body
         email_body = f"""
 <div style="font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#000; background:#f9f9f9; padding:16px; border-radius:8px;">
 <p>Hi Team,</p>
@@ -70,27 +70,49 @@ if uploaded_file:
 </p>
 
 <p><b>See information below:</b></p>
-
-<p>----------------------------</p>
+<p style="margin-bottom:6px;">----------------------------</p>
 """
 
+        # Add each Spartan
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
             name, aw, tbd = row
             email_body += f"""
-<p style="margin-left:0.25in;"><b>{idx}. {name}</b></p>
-<ul style="list-style-type:none; margin-top:0; margin-bottom:1em; margin-left:1.5in; padding-left:0;">
-  <li><span style="font-family:'Courier New'; color:#ED7D31;">o</span> <span style="color:#ED7D31;">PO#s Awaiting Shipping: {aw}</span></li>
-  <li><span style="font-family:'Courier New'; color:#0070C0;">o</span> <span style="color:#0070C0;">PO#s with TBD Ship-To Address: {tbd}</span></li>
+<p style="margin-bottom:0;"><b>{idx}. {name}</b></p>
+<ul style="list-style:none; margin-top:0; margin-left:1.5em; padding-left:0;">
+  <li><span style='color:#0070C0'>-</span> <span style='color:#ED7D31'>PO#s Awaiting Shipping: {aw}</span></li>
+  <li><span style='color:#0070C0'>-</span> <span style='color:#0070C0'>PO#s with TBD Ship-To Address: {tbd}</span></li>
 </ul>
 """
 
         email_body += """
-<p>----------------------------</p>
+<p style="margin-top:0;">----------------------------</p>
 <p>Thanks!</p>
 </div>
 """
+
+        # Render styled panel
         st.markdown("### 📩 Email Body")
         st.markdown(email_body, unsafe_allow_html=True)
+
+        # Copy-to-clipboard button
+        st.markdown("""
+            <button id="copyBtn" style="margin-top:10px; padding:8px 16px; font-family:Arial; font-size:13px; background:#0070C0; color:white; border:none; border-radius:4px; cursor:pointer;">
+                📋 Copy Email to Clipboard
+            </button>
+            <script>
+            const copyBtn = document.getElementById('copyBtn');
+            copyBtn.onclick = () => {{
+                const el = document.createElement('textarea');
+                el.value = `{email_body.replace('`', '\\`').replace('</p>', '\\n').replace('<br>', '\\n')}`;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                copyBtn.innerText = '✅ Copied!';
+                setTimeout(() => copyBtn.innerText = '📋 Copy Email to Clipboard', 3000);
+            }};
+            </script>
+        """, unsafe_allow_html=True)
 
 else:
     st.info("👆 Upload an Excel file to get started.")

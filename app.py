@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Awaiting Shipping Checker")
 st.title("📦 Awaiting Shipping Checker")
@@ -52,69 +51,29 @@ if uploaded_file:
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
 
         st.markdown("### ✉️ Email Subject")
-        st.markdown(f"<div style='font-family:Arial; font-size:14px; color:#333'>{subject}</div>", unsafe_allow_html=True)
+        st.code(subject)
 
-        # Build styled HTML email body
-        email_body = f"""
-<div style="font-family:Arial,sans-serif; font-size:11pt; line-height:1.5; color:#000; background:#f9f9f9; padding:16px; border-radius:8px;">
-<p>Hi Team,</p>
+        # Build rich text email output
+        lines = []
+        lines.append("Hi Team,\n")
+        lines.append("The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.\n")
+        lines.append("*_Note: for those PO#s with items awaiting shipment_* — _If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact._\n")
+        lines.append("*_Note: for those PO#s with a TBD ship-to address_* — _This information must be provided to the factory before they can issue a packing slip._\n")
+        lines.append("See information below:\n")
+        lines.append("----------------------------\n")
 
-<p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
-
-<p style="margin-left:1.5em;">
-  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with items awaiting shipment</span><span style="color:#ED7D31">: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</span></i>
-</p>
-
-<p style="margin-left:1.5em;">
-  <b><i><span style="color:black">Note:</span></i></b><i><span style="color:black"> for those PO#s with a TBD ship-to address: </span><span style="color:#0070C0">This information must be provided to the factory before they can issue a packing slip.</span></i>
-</p>
-
-<p><b>See information below:</b></p>
-<p style="margin-bottom:6px;">----------------------------</p>
-"""
-
-        # Add each Spartan’s section
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
-            name, aw, tbd = row
-            email_body += f"""
-<p style="margin-bottom:0;"><b>{idx}. {name}</b></p>
-<ul style="list-style:none; margin-top:0; margin-left:1.5em; padding-left:0;">
-  <li><span style='color:#0070C0'>-</span> <span style='color:#ED7D31'>PO#s Awaiting Shipping: {aw}</span></li>
-  <li><span style='color:#0070C0'>-</span> <span style='color:#0070C0'>PO#s with TBD Ship-To Address: {tbd}</span></li>
-</ul>
-"""
+            spartan, awaiting, tbd = row
+            lines.append(f"{idx}. {spartan}")
+            lines.append(f"- PO#s Awaiting Shipping: {awaiting}")
+            lines.append(f"- PO#s with TBD Ship-To Address: {tbd}")
+            lines.append("")
 
-        email_body += """
-<p style="margin-top:0;">----------------------------</p>
-<p>Thanks!</p>
-</div>
-"""
+        lines.append("----------------------------")
+        lines.append("Thanks!")
 
-        # Display formatted email preview
+        # Join into one copyable string
+        final_message = "\n".join(lines)
+
         st.markdown("### 📩 Email Body")
-        st.markdown(email_body, unsafe_allow_html=True)
-
-        # Copy-to-Clipboard Button
-        st.markdown("### 📎 Copy HTML to Clipboard")
-        components.html(f"""
-            <textarea id="emailContent" style="position: absolute; left: -9999px;">{email_body}</textarea>
-            <button onclick="
-                const el = document.getElementById('emailContent');
-                el.select();
-                document.execCommand('copy');
-                this.innerText = '✅ Copied!';
-                setTimeout(() => this.innerText = '📋 Copy HTML to Clipboard', 2000);
-            " style="
-                margin-top:10px;
-                padding:10px 16px;
-                font-size:14px;
-                background:#0070C0;
-                color:white;
-                border:none;
-                border-radius:4px;
-                cursor:pointer;
-            ">📋 Copy HTML to Clipboard</button>
-        """, height=100)
-
-else:
-    st.info("👆 Upload an Excel file to get started.")
+        st.text_area("Copy this text below ⬇️ and paste into Outlook", value=final_message, height=400)

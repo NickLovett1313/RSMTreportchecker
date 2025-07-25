@@ -53,46 +53,48 @@ if uploaded_file:
     if 'summary_df' in st.session_state and st.button("📋 Ready to send to team?"):
         summary_df = st.session_state['summary_df']
         formatted_date = format_date_suffix(datetime.today())
-        subject = f"Rosemount Orders – Daily Open Orders Report Review: {formatted_date}"
 
-        # Subject in Arial
-        st.markdown("### ✉️ Email Subject", unsafe_allow_html=True)
-        st.markdown(f"<div style='font-family:Arial'>{subject}</div>", unsafe_allow_html=True)
+        # Build the entire email as one HTML block
+        html = f"""
+<div style="font-family:Arial; line-height:1.4; color:#333;">
+  <h3 style="margin-bottom:0.2em;">✉️ Email Subject</h3>
+  <p style="margin-top:0; font-size:1.1em;"><strong>Rosemount Orders – Daily Open Orders Report Review: {formatted_date}</strong></p>
 
-        # Body HTML to match your PDF exactly
-        body_html = """
-<div style='font-family:Arial;'>
-  <p>Hi Team,&nbsp;&nbsp;</p>
-  <p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for<br>
-  those CC’d.&nbsp;</p>
-  <p><strong>Note:</strong> for those PO#s with items awaiting shipment: If you haven’t yet received a packing<br>
-  slip for release, I recommend reaching out to your factory contact.&nbsp;</p>
-  <p><strong>Note:</strong> for those PO#s with a TBD ship-to address: This information must be provided to<br>
-  the factory before they can issue a packing slip.&nbsp;</p>
-  <p>See information below:&nbsp;</p>
-  <hr style='border-top:1px dashed #333;'/>
-  <ol style='margin-left:0; padding-left:20px;'>
+  <h3 style="margin-top:1.5em; margin-bottom:0.2em;">📩 Email Body</h3>
+  <p style="margin-top:0;">Hi Team,</p>
+
+  <p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
+
+  <p><strong>Note:</strong> for those PO#s with items awaiting shipment: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</p>
+
+  <p><strong>Note:</strong> for those PO#s with a TBD ship-to address: This information must be provided to the factory before they can issue a packing slip.</p>
+
+  <p>See information below:</p>
+
+  <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
+
+  <ol style="padding-left:1em; margin:0;">
 """
-        # Add each Spartan
         for row in summary_df.itertuples(index=False):
-            spartan, awaiting, tbd = row
-            body_html += f"""
-    <li>{spartan}
-      <ul style='list-style-type:circle; margin:4px 0 4px 20px;'>
-        <li>PO#s Awaiting Shipping: {awaiting}</li>
-        <li>PO#s with TBD Ship-To Address: {tbd}</li>
+            sp, aw, td = row
+            html += f"""
+    <li style="margin-bottom:0.5em;">
+      <strong>{sp}</strong>
+      <ul style="list-style-type:circle; margin:0.3em 0 0.3em 1em; padding:0;">
+        <li>PO#s Awaiting Shipping: {aw}</li>
+        <li>PO#s with TBD Ship-To Address: {td}</li>
       </ul>
     </li>
 """
-        body_html += """
+        html += """
   </ol>
-  <hr style='border-top:1px dashed #333;'/>
+
+  <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
+
   <p>Thanks!</p>
 </div>
 """
-
-        st.markdown("### 📩 Email Body", unsafe_allow_html=True)
-        st.markdown(body_html, unsafe_allow_html=True)
+        st.markdown(html, unsafe_allow_html=True)
 
 else:
     st.info("👆 Upload an Excel file to get started.")

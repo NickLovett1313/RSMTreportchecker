@@ -33,7 +33,7 @@ if uploaded_file:
             for po in pos:
                 block = sub[sub["PO"] == po]
                 if (block["LINE_STATUS"] == "AWAITING_SHIPPING").any():
-                    clean = str(int(float(po))) if str(po).replace(".0", "").isdigit() else str(po)
+                    clean = str(int(float(po))) if str(po).replace(".0","").isdigit() else str(po)
                     a.append(clean)
                     if (block["SHIP_TO_CUSTOMER"] == "TO BE DETERMINED").any():
                         t.append(clean)
@@ -52,41 +52,57 @@ if uploaded_file:
         summary_df = st.session_state["summary_df"]
         date_str = format_date_suffix(datetime.today())
 
-        # Build copy-paste text
-        lines = []
-        lines.append("Hi Team,")
-        lines.append("")
-        lines.append("The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for")
-        lines.append("those CC’d.")
-        lines.append("")
-        lines.append("Note: for those PO#s with items awaiting shipment: If you haven’t yet received a packing")
-        lines.append("slip for release, I recommend reaching out to your factory contact.")
-        lines.append("")
-        lines.append("Note: for those PO#s with a TBD ship-to address: This information must be provided to")
-        lines.append("the factory before they can issue a packing slip.")
-        lines.append("")
-        lines.append("See information below:")
-        lines.append("")
-        lines.append("----------------------------")
-        lines.append("")
-
+        # Build plain-text lines
+        lines = [
+            "Hi Team,",
+            "",
+            "The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for",
+            "those CC’d.",
+            "",
+            "Note: for those PO#s with items awaiting shipment: If you haven’t yet received a packing",
+            "slip for release, I recommend reaching out to your factory contact.",
+            "",
+            "Note: for those PO#s with a TBD ship-to address: This information must be provided to",
+            "the factory before they can issue a packing slip.",
+            "",
+            "See information below:",
+            "",
+            "----------------------------",
+            ""
+        ]
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
             s, a, tbd = row
-            lines.append(f"{idx}. {s}")
-            lines.append(f"o PO#s Awaiting Shipping: {a}")
-            lines.append(f"o PO#s with TBD Ship-To Address: {tbd}")
-            lines.append("")
+            lines += [
+                f"{idx}. {s}",
+                f"o PO#s Awaiting Shipping: {a}",
+                f"o PO#s with TBD Ship-To Address: {tbd}",
+                ""
+            ]
+        lines += ["----------------------------", "", "Thanks!"]
 
-        lines.append("----------------------------")
-        lines.append("")
-        lines.append("Thanks!")
-
+        # Subject (rendered normally)
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
-
         st.markdown("### ✉️ Email Subject")
-        st.code(subject, language="")
+        st.markdown(f"<div style='font-family:Arial, sans-serif; color:#333; font-size:14px;'>{subject}</div>", unsafe_allow_html=True)
 
+        # Body in a styled container
+        body_text = "\n".join(lines)
+        html = f"""
+<div style="
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    background-color: #F5F5F5;
+    padding: 16px;
+    border-radius: 6px;
+    white-space: pre-wrap;
+">
+{body_text}
+</div>
+"""
         st.markdown("### 📩 Email Body")
-        st.code("\n".join(lines), language="")
+        st.markdown(html, unsafe_allow_html=True)
+
 else:
     st.info("👆 Upload an Excel file to get started.")

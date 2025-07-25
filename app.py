@@ -28,10 +28,10 @@ if uploaded_file:
         summary_data = []
         for spartan in selected_spartans:
             sdf = df[df['CONTACT_NM'] == spartan]
-            pos = sdf['PO'].dropna().unique().tolist()
+            poss = sdf['PO'].dropna().unique().tolist()
 
             awaiting, tbd = [], []
-            for po in pos:
+            for po in poss:
                 pod = sdf[sdf['PO'] == po]
                 if (pod['LINE_STATUS'] == 'AWAITING_SHIPPING').any():
                     clean = str(int(float(po))) if str(po).replace('.0','').isdigit() else str(po)
@@ -54,23 +54,18 @@ if uploaded_file:
         summary_df = st.session_state['summary_df']
         formatted_date = format_date_suffix(datetime.today())
 
-        # Build the entire email as one HTML block
+        # Build a single HTML block for subject + body
         html = f"""
-<div style="font-family:Arial; line-height:1.4; color:#333;">
+<div style="font-family:Arial; color:#333; line-height:1.4;">
   <h3 style="margin-bottom:0.2em;">✉️ Email Subject</h3>
-  <p style="margin-top:0; font-size:1.1em;"><strong>Rosemount Orders – Daily Open Orders Report Review: {formatted_date}</strong></p>
+  <p style="margin-top:0;">Rosemount Orders – Daily Open Orders Report Review: <strong>{formatted_date}</strong></p>
 
   <h3 style="margin-top:1.5em; margin-bottom:0.2em;">📩 Email Body</h3>
   <p style="margin-top:0;">Hi Team,</p>
-
   <p>The Daily Open Orders Report for your Rosemount purchase orders has been reviewed for those CC’d.</p>
-
   <p><strong>Note:</strong> for those PO#s with items awaiting shipment: If you haven’t yet received a packing slip for release, I recommend reaching out to your factory contact.</p>
-
   <p><strong>Note:</strong> for those PO#s with a TBD ship-to address: This information must be provided to the factory before they can issue a packing slip.</p>
-
   <p>See information below:</p>
-
   <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
 
   <ol style="padding-left:1em; margin:0;">
@@ -88,12 +83,12 @@ if uploaded_file:
 """
         html += """
   </ol>
-
   <hr style="border:none; border-top:1px dashed #999; margin:1em 0;"/>
-
   <p>Thanks!</p>
 </div>
 """
+
+        # Render it as HTML—select it all and paste into Outlook
         st.markdown(html, unsafe_allow_html=True)
 
 else:

@@ -2,8 +2,29 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="Awaiting Shipping Checker")
-st.title("📦 Awaiting Shipping Checker")
+st.set_page_config(page_title="RSMT – Daily Open Orders Report Checker")
+st.title("📦 RSMT – Daily Open Orders Report Checker")
+
+# Description + Instructions
+st.markdown("""
+This app checks the latest RSMT Open Orders report for selected Spartans and returns whether any of their assigned PO#s:
+- Have items **awaiting shipment**, or
+- Have a **TBD ship-to** address.
+
+#### 👉 Four Easy Steps:
+1. **Upload** the latest copy of the Excel sheet, located here:  
+   [Open Rosemount Daily Report](https://spartancontrols.sharepoint.com/sites/collab/vms/Rosemount%20daily%20open%20order%20report/Forms/AllItems.aspx?ovuser=0123b3b0%2Ddfd2%2D4b73%2Dbce1%2D5761a6245688%2CLovett%2ENick%40spartancontrols%2Ecom&OR=Teams%2DHL&CT=1749048035545&clickparams=eyJBcHBOYW1lIjoiVGVhbXMtRGVza3RvcCIsIkFwcFZlcnNpb24iOiI0OS8yNTA1MDQwMTYyNCIsIkhhc0ZlZGVyYXRlZFVzZXIiOmZhbHNlfQ%3D%3D)
+
+2. **Select** the Spartans you want to check.
+
+3. Click **Run Analysis** to generate the summary table.
+
+4. Click **Generate email to send to team**, then copy and send it to the selected Spartans.
+
+---
+
+⚠️ *Disclaimer: No data is stored or uploaded to any external server. Everything is processed locally through Streamlit during your session.*
+""")
 
 def format_date_suffix(date_obj):
     day = int(date_obj.strftime("%d"))
@@ -16,7 +37,7 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file, engine="openpyxl")
     spartans = sorted(df["CONTACT_NM"].dropna().unique().tolist())
 
-    st.markdown("### ✅ Step 1: Choose Spartans")
+    st.markdown("### ✅ Step 2: Choose Spartans")
     with st.form("spartan_form"):
         selected = st.multiselect("Select Spartans to check:", options=spartans)
         run = st.form_submit_button("🚀 Run Analysis")
@@ -45,7 +66,7 @@ if uploaded_file:
         st.dataframe(summary_df, use_container_width=True)
         st.session_state["summary_df"] = summary_df
 
-    if "summary_df" in st.session_state and st.button("📋 Ready to send to team?"):
+    if "summary_df" in st.session_state and st.button("📧 Generate email to send to team"):
         summary_df = st.session_state["summary_df"]
         date_str = format_date_suffix(datetime.today())
         subject = f"Rosemount Orders – Daily Open Orders Report Review: {date_str}"
@@ -72,7 +93,6 @@ if uploaded_file:
 <p style="margin-bottom:6px;">----------------------------</p>
 """
 
-        # Add each Spartan
         for idx, row in enumerate(summary_df.itertuples(index=False), start=1):
             name, aw, tbd = row
             email_body += f"""
@@ -89,29 +109,8 @@ if uploaded_file:
 </div>
 """
 
-        # Render styled panel
         st.markdown("### 📩 Email Body")
         st.markdown(email_body, unsafe_allow_html=True)
-
-        # Copy-to-clipboard button
-        st.markdown("""
-            <button id="copyBtn" style="margin-top:10px; padding:8px 16px; font-family:Arial; font-size:13px; background:#0070C0; color:white; border:none; border-radius:4px; cursor:pointer;">
-                📋 Copy Email to Clipboard
-            </button>
-            <script>
-            const copyBtn = document.getElementById('copyBtn');
-            copyBtn.onclick = () => {{
-                const el = document.createElement('textarea');
-                el.value = `{email_body.replace('`', '\\`').replace('</p>', '\\n').replace('<br>', '\\n')}`;
-                document.body.appendChild(el);
-                el.select();
-                document.execCommand('copy');
-                document.body.removeChild(el);
-                copyBtn.innerText = '✅ Copied!';
-                setTimeout(() => copyBtn.innerText = '📋 Copy Email to Clipboard', 3000);
-            }};
-            </script>
-        """, unsafe_allow_html=True)
 
 else:
     st.info("👆 Upload an Excel file to get started.")
